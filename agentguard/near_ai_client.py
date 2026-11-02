@@ -1,6 +1,6 @@
 """
-Client per NEAR AI Cloud (https://api.near.ai/v1).
-Gestisce l'inferenza del modello linguistico per il ragionamento e la pianificazione dei task.
+Client for NEAR AI Cloud (https://api.near.ai/v1).
+Manages LLM inference for task planning, cost estimation, and action decomposition.
 """
 
 from typing import Dict, Any, Optional
@@ -32,32 +32,32 @@ class NearAIClient:
 
     def plan_task(self, task_description: str, budget_limit_usd: float) -> AgentPlan:
         """
-        Invia il task al modello su NEAR AI Cloud per ottenere un piano d'azione strutturato.
+        Sends the task to NEAR AI Cloud to generate a structured action plan.
         """
-        # Se siamo in simulazione o la chiave è mock, forniamo una risposta strutturata e deterministica
+        # If in simulation mode or mock key is provided, return a deterministic structured plan
         if self.simulation_mode or self.api_key == "mock-key":
             return AgentPlan(
-                plan_summary=f"Esecuzione controllata del task: '{task_description}'",
+                plan_summary=f"Controlled task execution: '{task_description}'",
                 estimated_cost_usd=min(1.50, budget_limit_usd),
-                estimated_near=0.395,  # ~1.50 USD al tasso di ~3.80 USD/NEAR
+                estimated_near=0.395,  # ~1.50 USD at ~3.80 USD/NEAR
                 target_service="intents.near",
                 target_method="execute_intent",
                 reasoning=(
-                    "Il task richiede l'acquisto di un servizio o micro-pagamento cross-chain. "
-                    "Verrà utilizzato il contratto intents.near per saldare la spesa rimanendo "
-                    "entro il budget massimo autorizzato."
+                    "The task requires purchasing a service or cross-chain micro-payment. "
+                    "The intents.near contract will be used to settle the payment while "
+                    "strictly adhering to authorized policy budget limits."
                 )
             )
 
-        # Chiamata REST reale a NEAR AI Cloud (OpenAI-compatible chat completions)
+        # Live REST call to NEAR AI Cloud (OpenAI-compatible chat completions)
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
         
         system_prompt = (
-            "Sei un agente autonomo su NEAR Protocol. "
-            "Rispondi SOLO in formato JSON valido con i campi: "
+            "You are an autonomous agent on NEAR Protocol. "
+            "Respond ONLY in valid JSON with fields: "
             "plan_summary (str), estimated_cost_usd (float), estimated_near (float), "
             "target_service (str), target_method (str), reasoning (str)."
         )
@@ -66,7 +66,7 @@ class NearAIClient:
             "model": self.model,
             "messages": [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": f"Task: {task_description}. Budget max: ${budget_limit_usd}"}
+                {"role": "user", "content": f"Task: {task_description}. Max budget: ${budget_limit_usd}"}
             ],
             "temperature": 0.2
         }
@@ -84,12 +84,12 @@ class NearAIClient:
             parsed = json.loads(content)
             return AgentPlan(**parsed)
         except Exception as e:
-            # Fallback di sicurezza in caso di temporanea indisponibilità dell'endpoint remoto
+            # Fallback for transient endpoint unavailability
             return AgentPlan(
-                plan_summary=f"Piano fallback per: {task_description}",
+                plan_summary=f"Fallback execution plan for: {task_description}",
                 estimated_cost_usd=1.00,
                 estimated_near=0.263,
                 target_service="intents.near",
                 target_method="execute_intent",
-                reasoning=f"Generato tramite fallback locale di sicurezza: {str(e)}"
+                reasoning=f"Generated via local safety fallback: {str(e)}"
             )

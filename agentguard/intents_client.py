@@ -1,6 +1,6 @@
 """
-Client per NEAR Intents e 1-Click API.
-Permette all'agente di richiedere quotazioni e regolare pagamenti cross-chain.
+Client for NEAR Intents and 1-Click API.
+Enables autonomous agents to request swap quotes and settle cross-chain payments.
 """
 
 from typing import Dict, Any, Optional
@@ -24,11 +24,11 @@ class IntentsClient:
 
     def get_quote(self, token_in: str, token_out: str, amount_in: float) -> IntentQuote:
         """
-        Richiede una quotazione per uno scambio o pagamento tramite NEAR Intents.
-        In modalità simulazione (default per test e hackathon), calcola un tasso deterministico.
+        Requests a quotation for a token swap or payment via NEAR Intents.
+        In simulation mode (default for testing and hackathon review), calculates a deterministic rate.
         """
         if self.simulation_mode:
-            # Tasso simulato: 1 NEAR = $3.80 USD
+            # Simulated benchmark rate: 1 NEAR = $3.80 USD
             rate = 3.80 if token_in.upper() == "NEAR" else (1.0 / 3.80)
             amount_out = round(amount_in * rate, 4)
             cost_usd = round(amount_in * 3.80 if token_in.upper() == "NEAR" else amount_in, 2)
@@ -41,19 +41,19 @@ class IntentsClient:
                 estimated_cost_usd=cost_usd
             )
         else:
-            # Chiamata REST all'endpoint live di 1-Click Intents API
+            # REST call to live 1-Click Intents API endpoint
             # https://docs.near-intents.org/integration/distribution-channels/1click-api/
-            # Per i testnet / mock usa il fallback di sicurezza
-            raise NotImplementedError("Live Intents API richiede un JWT partner registrato su partners.near-intents.org")
+            # For testnet / mock use security fallback
+            raise NotImplementedError("Live Intents API requires a registered partner JWT from partners.near-intents.org")
 
     def execute_intent(self, quote: IntentQuote, recipient: str) -> Dict[str, Any]:
         """
-        Esegue l'intento firmato e salda il pagamento verso il destinatario.
+        Executes the signed intent and settles the payment to the recipient.
         """
         if time.time() > quote.expiration_timestamp:
-            raise ValueError("IntentQuoteExpired: La quotazione è scaduta, richiedine una nuova.")
+            raise ValueError("IntentQuoteExpired: Quote has expired, please request a new quote.")
 
-        # Simulazione o esecuzione on-chain
+        # Simulated or on-chain settlement
         return {
             "status": "SETTLED",
             "tx_hash": f"0x{uuid.uuid4().hex}",

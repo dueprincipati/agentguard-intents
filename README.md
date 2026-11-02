@@ -64,21 +64,21 @@ tests/test_agent_policy.py::test_agent_end_to_end_execution PASSED
 ### Step 3: Run the Autonomous Agent Loop
 Run the agent with a sample task and a $2.00 USD budget:
 ```bash
-python3 main.py --task "Analizza liquidita DEX cross-chain e acquista report di mercato" --budget 2.00
+python3 main.py --task "Analyze cross-chain DEX liquidity and purchase market report" --budget 2.00
 ```
 **Expected Output:**
 ```text
-[1] Ricevuto Task: "Analizza liquidita DEX cross-chain e acquista report di mercato"
-[2] Budget stanziato: $2.00 USD
-[3] Esecuzione in corso (NEAR AI -> Policy Guard -> NEAR Intents)...
+[1] Received Task: "Analyze cross-chain DEX liquidity and purchase market report"
+[2] Allocated Budget: $2.00 USD
+[3] Execution in progress (NEAR AI -> Policy Guard -> NEAR Intents)...
 
-✅ TASK COMPLETATO CON SUCCESSO!
-Piano: Esecuzione controllata del task: 'Analizza liquidita DEX cross-chain e acquista report di mercato'
-Scontrino Contabile: rec_xxxxxxxxxxxx
-Importo regolato: $1.50 (0.395 NEAR)
+✅ TASK COMPLETED SUCCESSFULLY!
+Plan: Controlled task execution: 'Analyze cross-chain DEX liquidity and purchase market report'
+Accounting Receipt: rec_xxxxxxxxxxxx
+Settled Amount: $1.50 (0.395 NEAR)
 Tx Hash: 0x...
-Allowance NEAR rimanente: 1.605 NEAR
-Totale speso oggi: $1.5 USD
+Remaining NEAR Allowance: 1.605 NEAR
+Total Spent Today: $1.5 USD
 ```
 
 ---
@@ -90,10 +90,10 @@ python3 main.py --simulate-attack
 ```
 **Expected Output:**
 ```text
-⚠️  [TEST DI SICUREZZA] Simulazione di transazione anomala / attacco:
-Tentativo di inviare $15.00 a un contratto non autorizzato ('malicious-dapp.near')...
-Esito: BLOCCATO DALLA POLICY
-Motivo del blocco: AccessDenied: Receiver 'malicious-dapp.near' non è autorizzato nella policy.
+⚠️  [SECURITY TEST] Simulating anomalous/malicious transaction attempt:
+Attempting to send $15.00 to unauthorized contract ('malicious-dapp.near')...
+Result: BLOCKED BY POLICY
+Block Reason: AccessDenied: Receiver 'malicious-dapp.near' is not authorized in policy.
 ```
 
 ---

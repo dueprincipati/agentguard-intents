@@ -1,6 +1,6 @@
 """
-Motore di Policy e Sicurezza per AgentGuard.
-Modella i vincoli delle Function Call Keys di NEAR, impedendo spese non autorizzate.
+Policy & Security Engine for AgentGuard.
+Models the constraints of NEAR Function Call Keys, preventing unauthorized transactions.
 """
 
 from datetime import datetime, timezone
@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 import uuid
 
 class Receipt(BaseModel):
-    """Ricevuta crittografica e contabile di una spesa effettuata dall'agente."""
+    """Cryptographic and accounting receipt of an expenditure executed by the agent."""
     receipt_id: str = Field(default_factory=lambda: f"rec_{uuid.uuid4().hex[:12]}")
     timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     task_id: str
@@ -20,7 +20,7 @@ class Receipt(BaseModel):
     status: str = "SETTLED"
 
 class PolicyViolation(Exception):
-    """Sollevata quando l'agente tenta di violare le regole di spesa."""
+    """Raised when an agent attempts to violate spending or permission policies."""
     pass
 
 class PolicyEngine:
@@ -37,11 +37,11 @@ class PolicyEngine:
         self.allowance_near = max_allowance_near
         self.spent_today_usd = 0.0
         
-        # Whitelist dei contratti e metodi autorizzati (come nelle Function Call Keys di NEAR)
+        # Whitelist of authorized receivers and methods (matching NEAR Function Call Keys)
         self.allowed_receivers = allowed_receivers or ["intents.near", "v1.agent-market.near", "defuse.near"]
         self.allowed_methods = allowed_methods or ["execute_intent", "request_task", "settle_payment"]
         
-        # Registro storico delle ricevute
+        # Audit log of receipts
         self.receipts: List[Receipt] = []
 
     def evaluate_transaction(
@@ -52,30 +52,30 @@ class PolicyEngine:
         method_name: str
     ) -> Tuple[bool, str]:
         """
-        Valuta se una transazione proposta rispetta tutte le policy di sicurezza.
-        Ritorna (consentito: bool, motivo: str).
+        Evaluates whether a proposed transaction adheres to all security policies.
+        Returns (is_allowed: bool, reason: str).
         """
-        # 1. Controllo destinatario (Receiver ID)
+        # 1. Receiver ID Check
         if receiver_id not in self.allowed_receivers:
-            return False, f"AccessDenied: Receiver '{receiver_id}' non è autorizzato nella policy."
+            return False, f"AccessDenied: Receiver '{receiver_id}' is not authorized in policy."
 
-        # 2. Controllo metodo dello smart contract
+        # 2. Smart Contract Method Check
         if method_name not in self.allowed_methods:
-            return False, f"AccessDenied: Metodo '{method_name}' non è autorizzato."
+            return False, f"AccessDenied: Method '{method_name}' is not authorized."
 
-        # 3. Controllo limite per singola transazione
+        # 3. Per-Transaction Spending Cap Check
         if amount_usd > self.max_spend_per_tx_usd:
-            return False, f"BudgetExceeded: ${amount_usd:.2f} supera il tetto massimo per tx (${self.max_spend_per_tx_usd:.2f})."
+            return False, f"BudgetExceeded: ${amount_usd:.2f} exceeds max per-transaction cap (${self.max_spend_per_tx_usd:.2f})."
 
-        # 4. Controllo budget giornaliero
+        # 4. Daily Cumulative Budget Check
         if (self.spent_today_usd + amount_usd) > self.daily_budget_usd:
-            return False, f"BudgetExceeded: Spesa proposta supererebbe il budget giornaliero (${self.daily_budget_usd:.2f})."
+            return False, f"BudgetExceeded: Proposed spend would exceed daily budget (${self.daily_budget_usd:.2f})."
 
-        # 5. Controllo allowance rimanente sulla chiave NEAR
+        # 5. Remaining NEAR Allowance on Function Call Key Check
         if amount_near > self.allowance_near:
-            return False, f"AllowanceExhausted: Richiesti {amount_near:.3f} NEAR, ma l'allowance residua è {self.allowance_near:.3f} NEAR."
+            return False, f"AllowanceExhausted: Requested {amount_near:.3f} NEAR, but remaining allowance is {self.allowance_near:.3f} NEAR."
 
-        return True, "Transazione approvata dalla policy."
+        return True, "Transaction approved by policy."
 
     def execute_and_record(
         self,
@@ -87,13 +87,13 @@ class PolicyEngine:
         mock_tx_hash: Optional[str] = None
     ) -> Receipt:
         """
-        Registra la spesa e genera lo scontrino contabile, aggiornando budget e allowance.
+        Records the expenditure, decrements allowance and budget, and generates a cryptographic receipt.
         """
         allowed, reason = self.evaluate_transaction(amount_usd, amount_near, receiver_id, method_name)
         if not allowed:
             raise PolicyViolation(reason)
 
-        # Aggiorna i bilanci
+        # Update spend tracking
         self.spent_today_usd += amount_usd
         self.allowance_near -= amount_near
         

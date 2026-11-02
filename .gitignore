@@ -1,19 +1,19 @@
-# Ambienti virtuali Python
+# Python virtual environments
 venv/
 .venv/
 env/
 
-# Cache Python e Test
+# Python cache & tests
 __pycache__/
 *.py[cod]
 .pytest_cache/
 
-# Variabili d'ambiente e segreti (FONDAMENTALE per NEAR)
+# Environment variables & secrets (CRITICAL for NEAR)
 .env
 *.key
 *.pem
 
-# File di sistema e IDE
+# IDE & OS files
 .DS_Store
 .vscode/
 .idea/

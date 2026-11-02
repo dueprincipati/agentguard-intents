@@ -1,6 +1,6 @@
 """
-Orchestratore dell'Agente Autonomo AgentGuard.
-Coordina NEAR AI Cloud, NEAR Intents e il motore di Policy in un ciclo decisionale sicuro.
+AgentGuard Autonomous Agent Orchestrator.
+Coordinates NEAR AI Cloud, NEAR Intents, and Policy Engine in a secure decision loop.
 """
 
 from typing import Dict, Any, Optional
@@ -27,18 +27,18 @@ class AgentGuard:
 
     def run_task(self, task_description: str, budget_usd: float) -> Dict[str, Any]:
         """
-        Esegue un task completo:
-        1. Pianifica tramite NEAR AI Cloud
-        2. Valida contro la Policy di sicurezza NEAR
-        3. Regola il pagamento tramite NEAR Intents
-        4. Emette e restituisce la ricevuta certificata
+        Executes a complete task cycle:
+        1. Plans action via NEAR AI Cloud
+        2. Validates plan against NEAR Function Call Key policy
+        3. Settles payment via NEAR Intents (1-Click)
+        4. Issues and records an immutable cryptographic receipt
         """
         task_id = f"task_{uuid.uuid4().hex[:8]}"
         
-        # 1. Fase di Ragionamento e Pianificazione (NEAR AI Cloud)
+        # 1. Reasoning and Planning Phase (NEAR AI Cloud)
         plan = self.ai.plan_task(task_description, budget_usd)
         
-        # 2. Verifica preventiva di Sicurezza (Policy Check)
+        # 2. Pre-flight Security Policy Verification
         allowed, reason = self.policy.evaluate_transaction(
             amount_usd=plan.estimated_cost_usd,
             amount_near=plan.estimated_near,
@@ -57,7 +57,7 @@ class AgentGuard:
                 "spent_today_usd": self.policy.spent_today_usd
             }
 
-        # 3. Richiesta Quotazione ed Esecuzione (NEAR Intents)
+        # 3. Intent Quotation and Execution (NEAR Intents)
         quote = self.intents.get_quote(
             token_in="NEAR",
             token_out="USDC",
@@ -69,7 +69,7 @@ class AgentGuard:
             recipient=plan.target_service
         )
 
-        # 4. Registrazione della Spesa e Generazione Scontrino Contabile
+        # 4. Expenditure Recording and Cryptographic Receipt Issuance
         receipt = self.policy.execute_and_record(
             task_id=task_id,
             amount_usd=quote.estimated_cost_usd,
