@@ -33,6 +33,16 @@ def main():
         action="store_true",
         help="Display current wallet status and remaining allowance"
     )
+    parser.add_argument(
+        "--audit",
+        action="store_true",
+        help="Display all past accounting receipts from the ledger"
+    )
+    parser.add_argument(
+        "--reset",
+        action="store_true",
+        help="Reset daily budget and allowance, clearing the ledger"
+    )
 
     args = parser.parse_args()
     agent = AgentGuard()
@@ -41,10 +51,28 @@ def main():
     print("🛡️  AGENTGUARD: Autonomous AI Agent on NEAR Protocol")
     print("=" * 60)
 
+    if args.reset:
+        agent.policy.reset_state()
+        print("🔄 Ledger and daily allowances have been successfully reset.")
+        print(f"Remaining NEAR allowance: {agent.policy.allowance_near:.3f} NEAR")
+        print(f"Spent today: ${agent.policy.spent_today_usd:.2f} / ${agent.policy.daily_budget_usd:.2f} USD")
+        return
+
     if args.status:
         print(f"Allowed receivers: {agent.policy.allowed_receivers}")
         print(f"Remaining NEAR allowance: {agent.policy.allowance_near:.3f} NEAR")
         print(f"Spent today: ${agent.policy.spent_today_usd:.2f} / ${agent.policy.daily_budget_usd:.2f} USD")
+        print(f"Total receipts logged: {len(agent.policy.receipts)}")
+        return
+
+    if args.audit:
+        print("\n📜 [AUDIT LOG] Historical Accounting Receipts:")
+        if not agent.policy.receipts:
+            print("No receipts recorded yet.")
+        else:
+            for r in agent.policy.receipts:
+                print(f"- [{r.timestamp}] {r.receipt_id} | ${r.amount_usd:.2f} ({r.amount_near:.3f} NEAR) -> {r.target_service} (Tx: {r.tx_hash[:16]}...)")
+        print("=" * 60)
         return
 
     if args.simulate_attack:

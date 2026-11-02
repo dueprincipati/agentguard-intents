@@ -10,7 +10,7 @@ from agentguard.agent import AgentGuard
 
 def test_policy_allows_valid_transaction():
     """Verify that a legitimate transaction within limits is approved."""
-    pe = PolicyEngine(max_spend_per_tx_usd=2.0, max_allowance_near=2.0)
+    pe = PolicyEngine(max_spend_per_tx_usd=2.0, max_allowance_near=2.0, persist=False)
     allowed, reason = pe.evaluate_transaction(
         amount_usd=1.20,
         amount_near=0.31,
@@ -22,7 +22,7 @@ def test_policy_allows_valid_transaction():
 
 def test_policy_rejects_unauthorized_receiver():
     """Verify that an unauthorized or malicious contract is rejected (AccessDenied)."""
-    pe = PolicyEngine()
+    pe = PolicyEngine(persist=False)
     allowed, reason = pe.evaluate_transaction(
         amount_usd=0.50,
         amount_near=0.1,
@@ -34,7 +34,7 @@ def test_policy_rejects_unauthorized_receiver():
 
 def test_policy_rejects_exceeding_single_tx_budget():
     """Verify that transactions exceeding the per-tx spending cap are rejected."""
-    pe = PolicyEngine(max_spend_per_tx_usd=2.00)
+    pe = PolicyEngine(max_spend_per_tx_usd=2.00, persist=False)
     allowed, reason = pe.evaluate_transaction(
         amount_usd=3.50,
         amount_near=0.9,
@@ -46,7 +46,7 @@ def test_policy_rejects_exceeding_single_tx_budget():
 
 def test_policy_rejects_exceeding_allowance():
     """Verify that the agent cannot spend more NEAR than its Function Call Key allowance."""
-    pe = PolicyEngine(max_allowance_near=1.0)
+    pe = PolicyEngine(max_allowance_near=1.0, persist=False)
     allowed, reason = pe.evaluate_transaction(
         amount_usd=1.50,
         amount_near=1.5,  # Exceeds allowance
@@ -66,7 +66,8 @@ def test_intents_quote_generation():
 
 def test_agent_end_to_end_execution():
     """Verify complete lifecycle: planning, policy check, intent settlement, and receipt generation."""
-    agent = AgentGuard()
+    test_policy = PolicyEngine(persist=False)
+    agent = AgentGuard(policy_engine=test_policy)
     initial_allowance = agent.policy.allowance_near
     
     result = agent.run_task("Cross-chain oracle data purchase", budget_usd=2.0)

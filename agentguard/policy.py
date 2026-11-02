@@ -1,19 +1,22 @@
 """
 Policy & Security Engine for AgentGuard.
-Models the constraints of NEAR Function Call Keys, preventing unauthorized transactions.
+Models the constraints of NEAR Function Call Keys, preventing unauthorized transactions
+and persisting an auditable accounting ledger.
 """
 
 from datetime import datetime, timezone
 from typing import List, Optional, Tuple
 from pydantic import BaseModel, Field
 import uuid
+import json
+import os
 
 class Receipt(BaseModel):
     """Cryptographic and accounting receipt of an expenditure executed by the agent."""
     receipt_id: str = Field(default_factory=lambda: f"rec_{uuid.uuid4().hex[:12]}")
     timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     task_id: str
-    target_service: str
+    target_service: str 
     amount_usd: float
     amount_near: float
     tx_hash: str
@@ -30,12 +33,17 @@ class PolicyEngine:
         daily_budget_usd: float = 5.00,
         max_allowance_near: float = 2.00,
         allowed_receivers: Optional[List[str]] = None,
-        allowed_methods: Optional[List[str]] = None
+        allowed_methods: Optional[List[str]] = None,
+        persist: bool = True,
+        ledger_file: str = "ledger.json"
     ):
         self.max_spend_per_tx_usd = max_spend_per_tx_usd
         self.daily_budget_usd = daily_budget_usd
+        self.max_allowance_near = max_allowance_near
         self.allowance_near = max_allowance_near
         self.spent_today_usd = 0.0
+        self.persist = persist
+        self.ledger_file = ledger_file
         
         # Whitelist of authorized receivers and methods (matching NEAR Function Call Keys)
         self.allowed_receivers = allowed_receivers or ["intents.near", "v1.agent-market.near", "defuse.near"]
@@ -43,6 +51,41 @@ class PolicyEngine:
         
         # Audit log of receipts
         self.receipts: List[Receipt] = []
+
+        if self.persist:
+            self._load_state()
+
+    def _load_state(self):
+        """Loads persistent accounting state and receipts from ledger.json if present."""
+        if os.path.exists(self.ledger_file):
+            try:
+                with open(self.ledger_file, "r") as f:
+                    data = json.load(f)
+                    self.spent_today_usd = float(data.get("spent_today_usd", 0.0))
+                    self.allowance_near = float(data.get("allowance_near", self.allowance_near))
+                    self.receipts = [Receipt(**r) for r in data.get("receipts", [])]
+            except Exception:
+                pass
+
+    def _save_state(self):
+        """Saves current spend totals and receipts to ledger.json."""
+        if not self.persist:
+            return
+        data = {
+            "spent_today_usd": round(self.spent_today_usd, 2),
+            "allowance_near": round(self.allowance_near, 3),
+            "receipts": [r.model_dump() for r in self.receipts]
+        }
+        with open(self.ledger_file, "w") as f:
+            json.dump(data, f, indent=2)
+
+    def reset_state(self):
+        """Resets the daily budget and allowance, clearing the local ledger file."""
+        self.spent_today_usd = 0.0
+        self.allowance_near = self.max_allowance_near
+        self.receipts = []
+        if self.persist and os.path.exists(self.ledger_file):
+            os.remove(self.ledger_file)
 
     def evaluate_transaction(
         self,
@@ -69,7 +112,7 @@ class PolicyEngine:
 
         # 4. Daily Cumulative Budget Check
         if (self.spent_today_usd + amount_usd) > self.daily_budget_usd:
-            return False, f"BudgetExceeded: Proposed spend would exceed daily budget (${self.daily_budget_usd:.2f})."
+            return False, f"BudgetExceeded: Proposed spend (${amount_usd:.2f}) would exceed daily budget (${self.daily_budget_usd:.2f}). Currently spent: ${self.spent_today_usd:.2f}."
 
         # 5. Remaining NEAR Allowance on Function Call Key Check
         if amount_near > self.allowance_near:
@@ -87,7 +130,7 @@ class PolicyEngine:
         mock_tx_hash: Optional[str] = None
     ) -> Receipt:
         """
-        Records the expenditure, decrements allowance and budget, and generates a cryptographic receipt.
+        Records the expenditure, decrements allowance and budget, and persists the cryptographic receipt.
         """
         allowed, reason = self.evaluate_transaction(amount_usd, amount_near, receiver_id, method_name)
         if not allowed:
@@ -106,4 +149,5 @@ class PolicyEngine:
             tx_hash=tx_hash
         )
         self.receipts.append(receipt)
+        self._save_state()
         return receipt

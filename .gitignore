@@ -8,6 +8,9 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 
+# Local state & ledger
+ledger.json
+
 # Environment variables & secrets (CRITICAL for NEAR)
 .env
 *.key
